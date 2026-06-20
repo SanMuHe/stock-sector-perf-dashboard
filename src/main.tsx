@@ -2,6 +2,8 @@ import { StrictMode, useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   ArrowDownUp,
+  ArrowUp,
+  ArrowDown,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
@@ -175,6 +177,17 @@ function App() {
     if (nextSnapshot) setSelectedDate(nextSnapshot.date);
   };
 
+  const renderSortIcon = (key: keyof SectorRow) => {
+    if (sort.key !== key) {
+      return <ArrowDownUp aria-hidden="true" size={15} className="sort-icon inactive" />;
+    }
+    return sort.direction === 'asc' ? (
+      <ArrowUp aria-hidden="true" size={15} className="sort-icon active" />
+    ) : (
+      <ArrowDown aria-hidden="true" size={15} className="sort-icon active" />
+    );
+  };
+
   return (
     <main className="page-shell">
       <section className="masthead" aria-labelledby="page-title">
@@ -260,15 +273,15 @@ function App() {
               <caption>Sector performance returns expressed as percentages.</caption>
               <thead>
                 <tr>
-                  <th scope="col">
+                  <th scope="col" aria-sort={sort.key === 'symbol' ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}>
                     <button type="button" onClick={() => updateSort('symbol')}>
-                      Symbol <ArrowDownUp aria-hidden="true" size={15} />
+                      Symbol {renderSortIcon('symbol')}
                     </button>
                   </th>
                   {periods.map((period) => (
-                    <th key={period.key} scope="col">
+                    <th key={period.key} scope="col" aria-sort={sort.key === period.key ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}>
                       <button type="button" onClick={() => updateSort(period.key)}>
-                        {period.label} <ArrowDownUp aria-hidden="true" size={15} />
+                        {period.label} {renderSortIcon(period.key)}
                       </button>
                     </th>
                   ))}

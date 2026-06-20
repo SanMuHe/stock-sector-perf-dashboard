@@ -304,6 +304,28 @@ thead button:focus-visible {
   outline: 0;
 }
 
+thead button .sort-icon {
+  transition: opacity 0.2s ease, color 0.2s ease;
+}
+
+thead button .sort-icon.inactive {
+  opacity: 0.35;
+}
+
+thead button:hover .sort-icon.inactive {
+  opacity: 0.75;
+}
+
+thead button .sort-icon.active {
+  opacity: 1;
+  color: var(--green);
+}
+
+thead th[aria-sort="ascending"] button,
+thead th[aria-sort="descending"] button {
+  color: var(--green);
+}
+
 tbody tr:nth-child(even) {
   background: #f5f7f6;
 }
