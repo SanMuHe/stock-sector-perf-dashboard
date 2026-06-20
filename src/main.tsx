@@ -1,6 +1,14 @@
 import { StrictMode, useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ArrowDownUp, CalendarDays, Search, TrendingDown, TrendingUp } from 'lucide-react';
+import {
+  ArrowDownUp,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  TrendingDown,
+  TrendingUp,
+} from 'lucide-react';
 import './styles.css';
 
 type PeriodKey = 'week' | 'month' | 'quarter' | 'halfYear' | 'year';
@@ -14,12 +22,16 @@ type SectorRow = {
   year: number;
 };
 
+type Snapshot = {
+  date: string;
+  file: string;
+  rows: SectorRow[];
+};
+
 type SortState = {
   key: keyof SectorRow;
   direction: 'asc' | 'desc';
 };
-
-const asOfDate = '06/18/2026';
 
 const periods: Array<{ key: PeriodKey; label: string; csv: string }> = [
   { key: 'week', label: '1 Week', csv: '1 wk' },
@@ -29,23 +41,39 @@ const periods: Array<{ key: PeriodKey; label: string; csv: string }> = [
   { key: 'year', label: '1 Year', csv: '1 yr' },
 ];
 
+const dateFormatter = new Intl.DateTimeFormat('en-US', {
+  month: '2-digit',
+  day: '2-digit',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+
+const parseDateFromFile = (file: string) => {
+  const match = file.match(/sector_perf_(\d{4}-\d{2}-\d{2})\.csv$/);
+  return match?.[1] ?? '';
+};
+
+const formatDate = (date: string) => dateFormatter.format(new Date(`${date}T00:00:00Z`));
+
 const parseCsv = (text: string): SectorRow[] => {
   const [headerLine, ...lines] = text.trim().split(/\r?\n/);
   const headers = headerLine.split(',').map((header) => header.trim());
 
-  return lines.map((line) => {
-    const cells = line.split(',').map((cell) => cell.trim());
-    const valueFor = (name: string) => Number(cells[headers.indexOf(name)]);
+  return lines
+    .filter(Boolean)
+    .map((line) => {
+      const cells = line.split(',').map((cell) => cell.trim());
+      const valueFor = (name: string) => Number(cells[headers.indexOf(name)]);
 
-    return {
-      symbol: cells[headers.indexOf('symbol')],
-      week: valueFor('1 wk'),
-      month: valueFor('1 mo'),
-      quarter: valueFor('3 mo'),
-      halfYear: valueFor('6 mo'),
-      year: valueFor('1 yr'),
-    };
-  });
+      return {
+        symbol: cells[headers.indexOf('symbol')],
+        week: valueFor('1 wk'),
+        month: valueFor('1 mo'),
+        quarter: valueFor('3 mo'),
+        halfYear: valueFor('6 mo'),
+        year: valueFor('1 yr'),
+      };
+    });
 };
 
 const formatPercent = (value: number) =>
@@ -62,23 +90,55 @@ const valueClass = (value: number) => {
 };
 
 function App() {
-  const [rows, setRows] = useState<SectorRow[]>([]);
+  const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
+  const [selectedDate, setSelectedDate] = useState('');
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<SortState>({ key: 'week', direction: 'desc' });
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/data/sector_perf.csv')
+    fetch('/data/sector_perf_index.json')
       .then((response) => {
-        if (!response.ok) throw new Error('Unable to load sector performance data.');
-        return response.text();
+        if (!response.ok) throw new Error('Unable to load the sector performance file index.');
+        return response.json() as Promise<string[]>;
       })
-      .then((csv) => setRows(parseCsv(csv)))
+      .then((files) =>
+        Promise.all(
+          files.map((file) =>
+            fetch(`/data/${file}`).then((response) => {
+              if (!response.ok) throw new Error(`Unable to load ${file}.`);
+              return response.text().then((csv) => ({
+                date: parseDateFromFile(file),
+                file,
+                rows: parseCsv(csv),
+              }));
+            }),
+          ),
+        ),
+      )
+      .then((loadedSnapshots) => {
+        const datedSnapshots = loadedSnapshots
+          .filter((snapshot) => snapshot.date)
+          .sort((a, b) => b.date.localeCompare(a.date));
+
+        setSnapshots(datedSnapshots);
+        setSelectedDate(datedSnapshots[0]?.date ?? '');
+      })
       .catch((err: Error) => setError(err.message));
   }, []);
 
+  const selectedSnapshot = useMemo(
+    () => snapshots.find((snapshot) => snapshot.date === selectedDate) ?? snapshots[0],
+    [selectedDate, snapshots],
+  );
+
+  const selectedIndex = useMemo(
+    () => snapshots.findIndex((snapshot) => snapshot.date === selectedSnapshot?.date),
+    [selectedSnapshot, snapshots],
+  );
+
   const filteredRows = useMemo(() => {
-    return rows
+    return [...(selectedSnapshot?.rows ?? [])]
       .filter((row) => row.symbol.toLowerCase().includes(query.trim().toLowerCase()))
       .sort((a, b) => {
         const aValue = a[sort.key];
@@ -91,22 +151,28 @@ function App() {
 
         return ((aValue as number) - (bValue as number)) * modifier;
       });
-  }, [query, rows, sort]);
+  }, [query, selectedSnapshot, sort]);
 
   const stats = useMemo(() => {
+    const rows = selectedSnapshot?.rows ?? [];
     if (rows.length === 0) return null;
     const leader = rows.reduce((best, row) => (row.week > best.week ? row : best), rows[0]);
     const laggard = rows.reduce((worst, row) => (row.week < worst.week ? row : worst), rows[0]);
     const breadth = rows.filter((row) => row.week > 0).length;
 
     return { leader, laggard, breadth };
-  }, [rows]);
+  }, [selectedSnapshot]);
 
   const updateSort = (key: keyof SectorRow) => {
     setSort((current) => ({
       key,
       direction: current.key === key && current.direction === 'desc' ? 'asc' : 'desc',
     }));
+  };
+
+  const moveWeek = (offset: number) => {
+    const nextSnapshot = snapshots[selectedIndex + offset];
+    if (nextSnapshot) setSelectedDate(nextSnapshot.date);
   };
 
   return (
@@ -116,16 +182,45 @@ function App() {
           <p className="eyebrow">Market dashboard</p>
           <h1 id="page-title">Sector Performance</h1>
           <p className="lede">
-            Relative strength across sector and thematic ETFs, ranked by short-term momentum.
+            Weekly sector snapshots with horizon rankings and short-term momentum by report date.
           </p>
         </div>
         <div className="as-of">
           <CalendarDays aria-hidden="true" size={18} />
-          <span>As of {asOfDate}</span>
+          <span>{selectedSnapshot ? `As of ${formatDate(selectedSnapshot.date)}` : 'Loading'}</span>
         </div>
       </section>
 
-      {stats && (
+      <section className="controls-panel" aria-label="Dashboard controls">
+        <div className="week-nav" aria-label="Navigate weekly snapshots">
+          <button
+            type="button"
+            onClick={() => moveWeek(1)}
+            disabled={selectedIndex < 0 || selectedIndex >= snapshots.length - 1}
+          >
+            <ChevronLeft aria-hidden="true" size={17} />
+            Prev
+          </button>
+          <span>{selectedSnapshot ? formatDate(selectedSnapshot.date) : 'Loading'}</span>
+          <button type="button" onClick={() => moveWeek(-1)} disabled={selectedIndex <= 0}>
+            Next
+            <ChevronRight aria-hidden="true" size={17} />
+          </button>
+        </div>
+
+        <label className="search-box">
+          <Search aria-hidden="true" size={17} />
+          <span className="sr-only">Filter symbols</span>
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Filter symbol"
+            type="search"
+          />
+        </label>
+      </section>
+
+      {stats && selectedSnapshot && (
         <section className="summary-grid" aria-label="Weekly market summary">
           <article>
             <span>1W leader</span>
@@ -135,9 +230,9 @@ function App() {
           <article>
             <span>Positive breadth</span>
             <strong>
-              {stats.breadth}/{rows.length}
+              {stats.breadth}/{selectedSnapshot.rows.length}
             </strong>
-            <em>{Math.round((stats.breadth / rows.length) * 100)}% above zero</em>
+            <em>{Math.round((stats.breadth / selectedSnapshot.rows.length) * 100)}% above zero</em>
           </article>
           <article>
             <span>1W laggard</span>
@@ -150,19 +245,9 @@ function App() {
       <section className="table-panel" aria-labelledby="table-title">
         <div className="table-toolbar">
           <div>
-            <p className="eyebrow">Performance matrix</p>
+            <p className="eyebrow">Selected snapshot</p>
             <h2 id="table-title">ETF returns by horizon</h2>
           </div>
-          <label className="search-box">
-            <Search aria-hidden="true" size={17} />
-            <span className="sr-only">Filter symbols</span>
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Filter symbol"
-              type="search"
-            />
-          </label>
         </div>
 
         {error ? (

@@ -1,6 +1,6 @@
 # Stock Sector Performance Dashboard
 
-A responsive Vite + React dashboard for viewing sector and ETF performance across multiple time horizons. The app reads a static CSV file from `public/data/sector_perf.csv`, formats decimal returns as percentages, and provides sorting plus symbol filtering.
+A responsive Vite + React dashboard for viewing weekly sector and ETF performance snapshots. The app reads dated CSV files from `public/data`, formats decimal returns as percentages, and provides sorting, symbol filtering, and Prev/Next snapshot navigation.
 
 ## Tech Stack
 
@@ -14,16 +14,20 @@ A responsive Vite + React dashboard for viewing sector and ETF performance acros
 
 ```text
 .
-├── public/
-│   └── data/
-│       └── sector_perf.csv
-├── src/
-│   ├── main.tsx
-│   └── styles.css
-├── index.html
-├── package.json
-├── tsconfig.json
-└── vite.config.ts
++-- public/
+|   +-- data/
+|       +-- sector_perf_index.json
+|       +-- sector_perf_2026-05-29.csv
+|       +-- sector_perf_2026-06-05.csv
+|       +-- sector_perf_2026-06-12.csv
+|       +-- sector_perf_2026-06-19.csv
++-- src/
+|   +-- main.tsx
+|   +-- styles.css
++-- index.html
++-- package.json
++-- tsconfig.json
++-- vite.config.ts
 ```
 
 ## Development
@@ -54,13 +58,22 @@ npm run dev -- --port 3000
 
 ## Data Updates
 
-The current dashboard reads this file:
+The dashboard reads this index file first:
 
 ```text
-public/data/sector_perf.csv
+public/data/sector_perf_index.json
 ```
 
-Historical weekly snapshots should be stored directly under `public/data` using this convention:
+The index lists the historical CSV files to load:
+
+```json
+[
+  "sector_perf_2026-05-29.csv",
+  "sector_perf_2026-06-05.csv"
+]
+```
+
+Historical weekly snapshots are stored directly under `public/data` using this convention:
 
 ```text
 public/data/sector_perf_YYYY-MM-DD.csv
@@ -81,19 +94,12 @@ SPY,0.0147,0.0099,0.1542,0.1214,0.2674
 
 Values should be decimal returns, not pre-formatted percentages. For example, `0.09` displays as `9.00%`.
 
-To refresh the dashboard from your source data, copy:
+To add a new weekly snapshot:
 
-```text
-C:\Users\he_yi\OneDrive\Data\sector_perf\sector_perf.csv
-```
-
-to:
-
-```text
-public\data\sector_perf.csv
-```
-
-Then rebuild or redeploy.
+1. Add a new file such as `public/data/sector_perf_2026-06-26.csv`.
+2. Add that filename to `public/data/sector_perf_index.json`.
+3. Run `npm run build`.
+4. Commit and deploy.
 
 ## Verification
 
@@ -137,15 +143,16 @@ No server, database, or paid Vercel feature is required.
 
 ## Updating After Deployment
 
-When the CSV changes:
+When a weekly CSV changes:
 
-1. Replace `public/data/sector_perf.csv`.
-2. Commit the change.
-3. Push to the deployed branch.
-4. Vercel will automatically rebuild and publish the new dashboard.
+1. Add or replace the dated CSV under `public/data`.
+2. Update `public/data/sector_perf_index.json` when adding a new date.
+3. Commit the change.
+4. Push to the deployed branch.
+5. Vercel will automatically rebuild and publish the new dashboard.
 
 ## Notes
 
 - `node_modules/`, `dist/`, and `.vercel/` are ignored by Git.
-- The app sorts by `1 Week` descending by default.
-- The as-of date is currently set in `src/main.tsx`.
+- The selected snapshot table sorts by `1 Week` descending by default.
+- The latest date in `sector_perf_index.json` is selected by default after files are loaded.
