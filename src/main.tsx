@@ -98,6 +98,27 @@ function App() {
   const [sort, setSort] = useState<SortState>({ key: 'week', direction: 'desc' });
   const [error, setError] = useState<string | null>(null);
 
+  // Sync URL date parameter with selectedDate state
+  useEffect(() => {
+    if (!selectedDate) return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('date') !== selectedDate) {
+      url.searchParams.set('date', selectedDate);
+      window.history.pushState({}, '', url.pathname + url.search);
+    }
+  }, [selectedDate]);
+
+  // Listen to browser Back/Forward navigation (popstate)
+  useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const queryDate = params.get('date');
+      setSelectedDate(queryDate ?? (snapshots[0]?.date ?? ''));
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [snapshots]);
+
   useEffect(() => {
     fetch('/data/sector_perf_index.json')
       .then((response) => {
@@ -124,7 +145,13 @@ function App() {
           .sort((a, b) => b.date.localeCompare(a.date));
 
         setSnapshots(datedSnapshots);
-        setSelectedDate(datedSnapshots[0]?.date ?? '');
+
+        // Read initial date from query parameter, check if it is valid
+        const params = new URLSearchParams(window.location.search);
+        const queryDate = params.get('date');
+        const isValidDate = queryDate && datedSnapshots.some((s) => s.date === queryDate);
+
+        setSelectedDate(isValidDate ? queryDate : (datedSnapshots[0]?.date ?? ''));
       })
       .catch((err: Error) => setError(err.message));
   }, []);
