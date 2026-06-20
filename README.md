@@ -54,10 +54,22 @@ npm run dev -- --port 3000
 
 ## Data Updates
 
-The deployed site reads this file:
+The current dashboard reads this file:
 
 ```text
 public/data/sector_perf.csv
+```
+
+Historical weekly snapshots should be stored directly under `public/data` using this convention:
+
+```text
+public/data/sector_perf_YYYY-MM-DD.csv
+```
+
+Example:
+
+```text
+public/data/sector_perf_2026-06-12.csv
 ```
 
 The expected CSV schema is:
