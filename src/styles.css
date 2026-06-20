@@ -405,4 +405,43 @@ td span {
   .week-nav {
     justify-content: space-between;
   }
+
+  .week-nav button {
+    min-width: 74px;
+    padding: 0 8px;
+  }
+
+  .week-nav span {
+    min-width: 100px;
+    padding: 0 8px;
+  }
+
+  .search-box {
+    width: 100%;
+  }
+
+  /* Sticky Symbol column when scrolling table horizontally */
+  thead th:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 3;
+    background: #ffffff;
+    border-right: 1px solid var(--line);
+  }
+
+  tbody th:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: #ffffff;
+    border-right: 1px solid var(--line);
+  }
+
+  tbody tr:nth-child(even) th:first-child {
+    background: #f5f7f6;
+  }
+
+  tbody tr:hover th:first-child {
+    background: #e7eeea;
+  }
 }
