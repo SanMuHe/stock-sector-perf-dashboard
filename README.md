@@ -16,11 +16,11 @@ A responsive Vite + React dashboard for viewing weekly sector and ETF performanc
 .
 +-- public/
 |   +-- data/
-|       +-- sector_perf_index.json
 |       +-- sector_perf_2026-05-29.csv
 |       +-- sector_perf_2026-06-05.csv
 |       +-- sector_perf_2026-06-12.csv
 |       +-- sector_perf_2026-06-19.csv
+|       +-- sector_perf_2026-06-27.csv
 +-- src/
 |   +-- main.tsx
 |   +-- styles.css
@@ -58,22 +58,7 @@ npm run dev -- --port 3000
 
 ## Data Updates
 
-The dashboard reads this index file first:
-
-```text
-public/data/sector_perf_index.json
-```
-
-The index lists the historical CSV files to load:
-
-```json
-[
-  "sector_perf_2026-05-29.csv",
-  "sector_perf_2026-06-05.csv"
-]
-```
-
-Historical weekly snapshots are stored directly under `public/data` using this convention:
+The dashboard discovers historical weekly snapshots at build/dev-server startup by scanning `public/data` for files using this convention:
 
 ```text
 public/data/sector_perf_YYYY-MM-DD.csv
@@ -97,9 +82,8 @@ Values should be decimal returns, not pre-formatted percentages. For example, `0
 To add a new weekly snapshot:
 
 1. Add a new file such as `public/data/sector_perf_2026-06-26.csv`.
-2. Add that filename to `public/data/sector_perf_index.json`.
-3. Run `npm run build`.
-4. Commit and deploy.
+2. Run `npm run build`.
+3. Commit and deploy.
 
 ## Verification
 
@@ -146,13 +130,12 @@ No server, database, or paid Vercel feature is required.
 When a weekly CSV changes:
 
 1. Add or replace the dated CSV under `public/data`.
-2. Update `public/data/sector_perf_index.json` when adding a new date.
-3. Commit the change.
-4. Push to the deployed branch.
-5. Vercel will automatically rebuild and publish the new dashboard.
+2. Commit the change.
+3. Push to the deployed branch.
+4. Vercel will automatically rebuild and publish the new dashboard.
 
 ## Notes
 
 - `node_modules/`, `dist/`, and `.vercel/` are ignored by Git.
 - The selected snapshot table sorts by `1 Week` descending by default.
-- The latest date in `sector_perf_index.json` is selected by default after files are loaded.
+- The latest discovered snapshot date is selected by default after files are loaded.

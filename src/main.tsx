@@ -4,13 +4,13 @@ import {
   ArrowDownUp,
   ArrowUp,
   ArrowDown,
-  CalendarDays,
   ChevronLeft,
   ChevronRight,
   Search,
   TrendingDown,
   TrendingUp,
 } from 'lucide-react';
+import sectorPerfFiles from 'virtual:sector-perf-files';
 import './styles.css';
 
 type PeriodKey = 'week' | 'month' | 'quarter' | 'halfYear' | 'year';
@@ -120,25 +120,18 @@ function App() {
   }, [snapshots]);
 
   useEffect(() => {
-    fetch('/data/sector_perf_index.json')
-      .then((response) => {
-        if (!response.ok) throw new Error('Unable to load the sector performance file index.');
-        return response.json() as Promise<string[]>;
-      })
-      .then((files) =>
-        Promise.all(
-          files.map((file) =>
-            fetch(`/data/${file}`).then((response) => {
-              if (!response.ok) throw new Error(`Unable to load ${file}.`);
-              return response.text().then((csv) => ({
-                date: parseDateFromFile(file),
-                file,
-                rows: parseCsv(csv),
-              }));
-            }),
-          ),
-        ),
-      )
+    Promise.all(
+      sectorPerfFiles.map((file) =>
+        fetch(`/data/${file}`).then((response) => {
+          if (!response.ok) throw new Error(`Unable to load ${file}.`);
+          return response.text().then((csv) => ({
+            date: parseDateFromFile(file),
+            file,
+            rows: parseCsv(csv),
+          }));
+        }),
+      ),
+    )
       .then((loadedSnapshots) => {
         const datedSnapshots = loadedSnapshots
           .filter((snapshot) => snapshot.date)
@@ -224,10 +217,6 @@ function App() {
           <p className="lede">
             Weekly sector snapshots with horizon rankings and short-term momentum by report date.
           </p>
-        </div>
-        <div className="as-of">
-          <CalendarDays aria-hidden="true" size={18} />
-          <span>{selectedSnapshot ? `As of ${formatDate(selectedSnapshot.date)}` : 'Loading'}</span>
         </div>
       </section>
 

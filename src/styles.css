@@ -97,20 +97,6 @@ h2 {
   line-height: 1.55;
 }
 
-.as-of {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  min-height: 44px;
-  padding: 0 16px;
-  border: 1px solid var(--line);
-  background: var(--paper);
-  box-shadow: var(--shadow);
-  color: #34423b;
-  font-weight: 750;
-}
-
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -396,10 +382,6 @@ td span {
 
   .summary-grid {
     display: grid;
-  }
-
-  .as-of {
-    width: fit-content;
   }
 
   .week-nav {
